@@ -23,9 +23,7 @@
 
 #include "KeyFrame.h"
 #include "Map.h"
-#include "LoopClosing.h"
 #include "Tracking.h"
-#include "KeyFrameDatabase.h"
 
 #include <mutex>
 
@@ -41,8 +39,6 @@ class LocalMapping
 {
 public:
     LocalMapping(Map* pMap, const float bMonocular);
-
-    void SetLoopCloser(LoopClosing* pLoopCloser);
 
     void SetTracker(Tracking* pTracker);
 
@@ -101,7 +97,6 @@ protected:
 
     Map* mpMap;
 
-    LoopClosing* mpLoopCloser;
     Tracking* mpTracker;
 
     std::list<KeyFrame*> mlNewKeyFrames;

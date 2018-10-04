@@ -24,10 +24,8 @@
 #include "KeyFrame.h"
 #include "LocalMapping.h"
 #include "Map.h"
-#include "ORBVocabulary.h"
 #include "Tracking.h"
 
-#include "KeyFrameDatabase.h"
 
 #include <thread>
 #include <mutex>
@@ -38,7 +36,6 @@ namespace ORB_SLAM2
 
 class Tracking;
 class LocalMapping;
-class KeyFrameDatabase;
 
 
 class LoopClosing
@@ -51,7 +48,7 @@ public:
 
 public:
 
-    LoopClosing(Map* pMap, KeyFrameDatabase* pDB, ORBVocabulary* pVoc,const bool bFixScale);
+    LoopClosing(Map* pMap, const bool bFixScale);
 
     void SetTracker(Tracking* pTracker);
 
@@ -86,10 +83,6 @@ protected:
 
     bool CheckNewKeyFrames();
 
-    bool DetectLoop();
-
-    bool ComputeSim3();
-
     void SearchAndFuse(const KeyFrameAndPose &CorrectedPosesMap);
 
     void CorrectLoop();
@@ -106,9 +99,6 @@ protected:
 
     Map* mpMap;
     Tracking* mpTracker;
-
-    KeyFrameDatabase* mpKeyFrameDB;
-    ORBVocabulary* mpORBVocabulary;
 
     LocalMapping *mpLocalMapper;
 

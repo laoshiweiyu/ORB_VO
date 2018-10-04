@@ -37,12 +37,11 @@ Frame::Frame()
 
 //Copy Constructor
 Frame::Frame(const Frame &frame)
-    :mpORBvocabulary(frame.mpORBvocabulary), mpORBextractorLeft(frame.mpORBextractorLeft), mpORBextractorRight(frame.mpORBextractorRight),
+    :mpORBextractorLeft(frame.mpORBextractorLeft), mpORBextractorRight(frame.mpORBextractorRight),
      mTimeStamp(frame.mTimeStamp), mK(frame.mK.clone()), mDistCoef(frame.mDistCoef.clone()),
      mbf(frame.mbf), mb(frame.mb), mThDepth(frame.mThDepth), N(frame.N), mvKeys(frame.mvKeys),
      mvKeysRight(frame.mvKeysRight), mvKeysUn(frame.mvKeysUn),  mvuRight(frame.mvuRight),
-     mvDepth(frame.mvDepth), mBowVec(frame.mBowVec), mFeatVec(frame.mFeatVec),
-     mDescriptors(frame.mDescriptors.clone()), mDescriptorsRight(frame.mDescriptorsRight.clone()),
+     mvDepth(frame.mvDepth), mDescriptors(frame.mDescriptors.clone()), mDescriptorsRight(frame.mDescriptorsRight.clone()),
      mvpMapPoints(frame.mvpMapPoints), mvbOutlier(frame.mvbOutlier), mnId(frame.mnId),
      mpReferenceKF(frame.mpReferenceKF), mnScaleLevels(frame.mnScaleLevels),
      mfScaleFactor(frame.mfScaleFactor), mfLogScaleFactor(frame.mfLogScaleFactor),
@@ -58,8 +57,8 @@ Frame::Frame(const Frame &frame)
 }
 
 
-Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor* extractorLeft, ORBextractor* extractorRight, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
-    :mpORBvocabulary(voc),mpORBextractorLeft(extractorLeft),mpORBextractorRight(extractorRight), mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),
+Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor* extractorLeft, ORBextractor* extractorRight, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
+    :mpORBextractorLeft(extractorLeft),mpORBextractorRight(extractorRight), mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),
      mpReferenceKF(static_cast<KeyFrame*>(NULL))
 {
     // Frame ID
@@ -116,8 +115,8 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     AssignFeaturesToGrid();
 }
 
-Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
-    :mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
+Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor* extractor, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
+    :mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
      mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth)
 {
     // Frame ID
@@ -143,63 +142,6 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     UndistortKeyPoints();
 
     ComputeStereoFromRGBD(imDepth);
-
-    mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));
-    mvbOutlier = vector<bool>(N,false);
-
-    // This is done only for the first Frame (or after a change in the calibration)
-    if(mbInitialComputations)
-    {
-        ComputeImageBounds(imGray);
-
-        mfGridElementWidthInv=static_cast<float>(FRAME_GRID_COLS)/static_cast<float>(mnMaxX-mnMinX);
-        mfGridElementHeightInv=static_cast<float>(FRAME_GRID_ROWS)/static_cast<float>(mnMaxY-mnMinY);
-
-        fx = K.at<float>(0,0);
-        fy = K.at<float>(1,1);
-        cx = K.at<float>(0,2);
-        cy = K.at<float>(1,2);
-        invfx = 1.0f/fx;
-        invfy = 1.0f/fy;
-
-        mbInitialComputations=false;
-    }
-
-    mb = mbf/fx;
-
-    AssignFeaturesToGrid();
-}
-
-
-Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
-    :mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
-     mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth)
-{
-    // Frame ID
-    mnId=nNextId++;
-
-    // Scale Level Info
-    mnScaleLevels = mpORBextractorLeft->GetLevels();
-    mfScaleFactor = mpORBextractorLeft->GetScaleFactor();
-    mfLogScaleFactor = log(mfScaleFactor);
-    mvScaleFactors = mpORBextractorLeft->GetScaleFactors();
-    mvInvScaleFactors = mpORBextractorLeft->GetInverseScaleFactors();
-    mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();
-    mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
-
-    // ORB extraction
-    ExtractORB(0,imGray);
-
-    N = mvKeys.size();
-
-    if(mvKeys.empty())
-        return;
-
-    UndistortKeyPoints();
-
-    // Set no stereo information
-    mvuRight = vector<float>(N,-1);
-    mvDepth = vector<float>(N,-1);
 
     mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));
     mvbOutlier = vector<bool>(N,false);
@@ -391,15 +333,6 @@ bool Frame::PosInGrid(const cv::KeyPoint &kp, int &posX, int &posY)
     return true;
 }
 
-
-void Frame::ComputeBoW()
-{
-    if(mBowVec.empty())
-    {
-        vector<cv::Mat> vCurrentDesc = Converter::toDescriptorVector(mDescriptors);
-        mpORBvocabulary->transform(vCurrentDesc,mBowVec,mFeatVec,4);
-    }
-}
 
 void Frame::UndistortKeyPoints()
 {

@@ -25,17 +25,11 @@
 #include<opencv2/core/core.hpp>
 #include<opencv2/features2d/features2d.hpp>
 
-#include"Viewer.h"
-#include"FrameDrawer.h"
 #include"Map.h"
 #include"LocalMapping.h"
-#include"LoopClosing.h"
 #include"Frame.h"
-#include "ORBVocabulary.h"
-#include"KeyFrameDatabase.h"
 #include"ORBextractor.h"
 #include "Initializer.h"
-#include "MapDrawer.h"
 #include "System.h"
 
 #include <mutex>
@@ -43,37 +37,27 @@
 namespace ORB_SLAM2
 {
 
-class Viewer;
 class FrameDrawer;
 class Map;
 class LocalMapping;
-class LoopClosing;
 class System;
 
 class Tracking
 {  
 
 public:
-    Tracking(System* pSys, ORBVocabulary* pVoc, FrameDrawer* pFrameDrawer, MapDrawer* pMapDrawer, Map* pMap,
-             KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor);
+    Tracking(System* pSys, Map* pMap, const string &strSettingPath, const int sensor);
 
     // Preprocess the input and call Track(). Extract features and performs stereo matching.
     cv::Mat GrabImageStereo(const cv::Mat &imRectLeft,const cv::Mat &imRectRight, const double &timestamp);
     cv::Mat GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp);
-    cv::Mat GrabImageMonocular(const cv::Mat &im, const double &timestamp);
 
     void SetLocalMapper(LocalMapping* pLocalMapper);
-    void SetLoopClosing(LoopClosing* pLoopClosing);
-    void SetViewer(Viewer* pViewer);
 
     // Load new settings
     // The focal lenght should be similar or scale prediction will fail when projecting points
     // TODO: Modify MapPoint::PredictScale to take into account focal lenght
     void ChangeCalibration(const string &strSettingPath);
-
-    // Use this function if you have deactivated local mapping and you only want to localize the camera.
-    void InformOnlyTracking(const bool &flag);
-
 
 public:
 
@@ -96,22 +80,12 @@ public:
     Frame mCurrentFrame;
     cv::Mat mImGray;
 
-    // Initialization Variables (Monocular)
-    std::vector<int> mvIniLastMatches;
-    std::vector<int> mvIniMatches;
-    std::vector<cv::Point2f> mvbPrevMatched;
-    std::vector<cv::Point3f> mvIniP3D;
-    Frame mInitialFrame;
-
     // Lists used to recover the full camera trajectory at the end of the execution.
     // Basically we store the reference keyframe for each frame and its relative transformation
     list<cv::Mat> mlRelativeFramePoses;
     list<KeyFrame*> mlpReferences;
     list<double> mlFrameTimes;
     list<bool> mlbLost;
-
-    // True if local mapping is deactivated and we are performing only localization
-    bool mbOnlyTracking;
 
     void Reset();
 
@@ -123,16 +97,10 @@ protected:
     // Map initialization for stereo and RGB-D
     void StereoInitialization();
 
-    // Map initialization for monocular
-    void MonocularInitialization();
-    void CreateInitialMapMonocular();
-
     void CheckReplacedInLastFrame();
     bool TrackReferenceKeyFrame();
     void UpdateLastFrame();
     bool TrackWithMotionModel();
-
-    bool Relocalization();
 
     void UpdateLocalMap();
     void UpdateLocalPoints();
@@ -144,26 +112,12 @@ protected:
     bool NeedNewKeyFrame();
     void CreateNewKeyFrame();
 
-    // In case of performing only localization, this flag is true when there are no matches to
-    // points in the map. Still tracking will continue if there are enough matches with temporal points.
-    // In that case we are doing visual odometry. The system will try to do relocalization to recover
-    // "zero-drift" localization to the map.
-    bool mbVO;
-
     //Other Thread Pointers
     LocalMapping* mpLocalMapper;
-    LoopClosing* mpLoopClosing;
 
     //ORB
     ORBextractor* mpORBextractorLeft, *mpORBextractorRight;
     ORBextractor* mpIniORBextractor;
-
-    //BoW
-    ORBVocabulary* mpORBVocabulary;
-    KeyFrameDatabase* mpKeyFrameDB;
-
-    // Initalization (only for monocular)
-    Initializer* mpInitializer;
 
     //Local Map
     KeyFrame* mpReferenceKF;
@@ -173,11 +127,6 @@ protected:
     // System
     System* mpSystem;
     
-    //Drawers
-    Viewer* mpViewer;
-    FrameDrawer* mpFrameDrawer;
-    MapDrawer* mpMapDrawer;
-
     //Map
     Map* mpMap;
 
